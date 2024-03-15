@@ -1,4 +1,8 @@
-use crate::parse::{domainlist as parse_domainlist, hostfile as parse_hostfile};
+use crate::{
+    parse::{domainlist as parse_domainlist, hostfile as parse_hostfile},
+    Source, SourceType,
+};
+use futures::{Future, Stream, StreamExt};
 use log::info;
 use std::{collections::HashSet, error::Error};
 use url::Host;
@@ -65,19 +69,55 @@ impl Client {
         }
     }
 
-    pub async fn domainlist(&self, url: &str, set: &mut HashSet<Host>) -> Result<(), AppError> {
-        info!("Fetching hostfile: {url}");
+    pub async fn domainlist(&self, url: &str) -> Result<HashSet<Host>, AppError> {
+        let mut result = HashSet::<Host>::new();
+        info!("Fetching domainlist (stream): {url}");
         let body = self.get_html_body(url).await?;
-        info!("Fetched!");
-        parse_domainlist(&body, set);
-        Ok(())
+        info!("Fetched {url}!");
+        parse_domainlist(&body, &mut result);
+        Ok(result)
     }
 
-    pub async fn hostfile(&self, url: &str, set: &mut HashSet<Host>) -> Result<(), AppError> {
-        info!("Fetching hostfile: {url}");
+    pub async fn hostsfile(&self, url: &str) -> Result<HashSet<Host>, AppError> {
+        let mut result = HashSet::<Host>::new();
+        info!("Fetching domainlist (stream): {url}");
         let body = self.get_html_body(url).await?;
-        info!("Fetched!");
-        parse_hostfile(&body, set);
+        info!("Fetched {url}!");
+        parse_hostfile(&body, &mut result);
+        Ok(result)
+    }
+
+    pub async fn fetch_set(&self, source: &Source<'_>) -> Result<HashSet<Host>, AppError> {
+        let Source { url, source_type } = source;
+        match source_type {
+            SourceType::DomainList => self.domainlist(url).await,
+            SourceType::HostsFile => self.hostsfile(url).await,
+        }
+    }
+
+    fn fetch_futures<'a>(
+        &'a self,
+        sources: &'a [Source],
+    ) -> impl Stream<Item = impl Future<Output = Result<HashSet<Host>, AppError>> + 'a> {
+        futures::stream::iter(sources).map(move |val| self.fetch_set(val))
+    }
+
+    pub async fn domainlists(
+        &self,
+        sources: &[Source<'_>],
+        set: &mut HashSet<Host>,
+    ) -> Result<(), AppError> {
+        let concurrent_downloads = 3;
+        let mut result_sets = self
+            .fetch_futures(sources)
+            .buffer_unordered(concurrent_downloads)
+            .collect::<Vec<Result<HashSet<Host>, AppError>>>()
+            .await;
+
+        for result_set in &mut result_sets {
+            let set_values = result_set.as_mut().unwrap().drain();
+            set.extend(set_values);
+        }
         Ok(())
     }
 }
