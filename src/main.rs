@@ -9,7 +9,7 @@ use fetch::Client as FetchClient;
 use file_system::{get_blocklists_from_config_file, write_blocklist_rpz_file, Blocklists};
 use log::warn;
 use num_format::{Locale, ToFormattedString};
-use std::{collections::HashSet, path::PathBuf, process};
+use std::{collections::HashSet, path::PathBuf};
 use url::Host;
 
 #[derive(Parser)]
@@ -21,6 +21,41 @@ struct Cli {
     /// Config file path (default: ./blocklist-generator.toml)
     #[clap(short, long, value_parser)]
     config: Option<PathBuf>,
+}
+
+#[derive(Debug)]
+enum SourceType {
+    DomainList,
+    HostsFile,
+}
+
+#[derive(Debug)]
+struct Source<'a> {
+    url: &'a str,
+    source_type: SourceType,
+}
+
+fn sources_from_blocklists(blocklists: &Blocklists) -> Vec<Source> {
+    let mut result: Vec<Source> = Vec::new();
+    let Blocklists {
+        hosts_file_blocklist_urls,
+        domain_blocklist_urls,
+    } = blocklists;
+
+    let () = &hosts_file_blocklist_urls.iter().for_each(|val| {
+        result.push(Source {
+            url: val,
+            source_type: SourceType::HostsFile,
+        });
+    });
+    let () = &domain_blocklist_urls.iter().for_each(|val| {
+        result.push(Source {
+            url: val,
+            source_type: SourceType::DomainList,
+        });
+    });
+
+    result
 }
 
 #[tokio::main]
@@ -36,29 +71,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => &default_config_path,
     };
 
-    let Blocklists {
-        hostfile_blocklist_urls,
-        domain_blocklist_urls,
-    } = get_blocklists_from_config_file(config_path);
+    let blocklists = get_blocklists_from_config_file(config_path);
+    let sources = sources_from_blocklists(&blocklists);
 
     let fetch_client = FetchClient::default();
     let mut set: HashSet<Host> = HashSet::new();
-    for url in hostfile_blocklist_urls {
-        match fetch_client.hostfile(&url, &mut set).await {
-            Ok(()) => {}
-            Err(error) => {
-                log::error!("{error}");
-                eprintln!("[ ERROR ]: {error}");
-                process::exit(1);
-            }
-        }
-    }
-    for url in domain_blocklist_urls {
-        if let Err(error) = fetch_client.domainlist(&url, &mut set).await {
-            log::error!("{error}");
-            return Err(error.into());
-        };
-    }
+    fetch_client.domainlists(&sources, &mut set).await?;
+
     set.remove(&Host::parse("0.0.0.0").unwrap());
     set.remove(&Host::parse("127.0.0.1").unwrap());
     set.remove(&Host::parse("255.255.255.255").unwrap());

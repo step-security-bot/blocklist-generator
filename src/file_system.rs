@@ -11,7 +11,7 @@ use url::Host;
 
 #[derive(Deserialize)]
 pub struct Blocklists {
-    pub hostfile_blocklist_urls: Vec<String>,
+    pub hosts_file_blocklist_urls: Vec<String>,
     pub domain_blocklist_urls: Vec<String>,
 }
 

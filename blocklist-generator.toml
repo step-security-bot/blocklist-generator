@@ -1,5 +1,5 @@
 [blocklists]
-hostfile_blocklist_urls = [
+hosts_file_blocklist_urls = [
   "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts;showintro=0",
   "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn/hosts",
   "https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt",
