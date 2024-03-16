@@ -30,7 +30,4 @@ toml = { version = "0.8.11", features = ["parse"] }
 url = "2.5.0"
 
 [dev-dependencies]
-fake = "~2.3"
-quickcheck = "0.9.2"
-quickcheck_macros = "0.9.1"
-rand_core = "0.6.4"
+proptest = "1.4.0"

@@ -94,7 +94,7 @@ pub fn hostfile(file_body: &str, set: &mut HashSet<Host>) {
 #[cfg(test)]
 mod tests {
     use super::{parse_hostfile_line, parse_hostname, parse_ipv4_address, parse_ipv4_octet};
-    use fake::{faker, Fake};
+    use proptest::{prop_assert_eq, prop_compose, proptest};
 
     #[test]
     fn parse_ip4_octet_parses_valid_ipv4_octet() {
@@ -115,6 +115,20 @@ mod tests {
         assert_eq!(result_1, Ok(("", "12")));
         assert_eq!(result_2, Ok(("", "123")));
         assert_eq!(result_3, Ok(("4", "123")));
+    }
+
+    proptest! {
+    #[test]
+    fn parse_ip4_octet_parses_valid_ipv4_octet_proptest(octet in 0u8..) {
+        // arrange
+        let octet_string = octet.to_string();
+
+        // act
+        let result = parse_ipv4_octet(&octet_string);
+
+        // assert
+        prop_assert_eq!(result, Ok(("", octet_string.as_str())));
+    }
     }
 
     #[test]
@@ -153,21 +167,22 @@ mod tests {
         );
     }
 
-    #[derive(Debug, Clone)]
-    struct ValidIPv4AddressFixture(pub String);
+    proptest! {
+    #[test]
+    fn parse_ipv4_adress_parses_valid_ipv4_proptest(
+        octet_0 in 0u8..,
+        octet_1 in 0u8..,
+        octet_2 in 0u8..,
+        octet_3 in 0u8..) {
+        // arrange
+        let ipv4_address = format!("{octet_0}.{octet_1}.{octet_2}.{octet_3}");
 
-    impl quickcheck::Arbitrary for ValidIPv4AddressFixture {
-        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-            let ipv4_address = faker::internet::en::IPv4().fake_with_rng(g);
-            Self(ipv4_address)
-        }
+        // act
+        let result = parse_ipv4_address(&ipv4_address);
+
+        // assert
+        prop_assert_eq!(result, Ok(("", ipv4_address.as_str())));
     }
-
-    #[quickcheck_macros::quickcheck]
-    fn parse_ipv4_address_parses_random_generated_ipv4_address(
-        valid_ipv4_address: ValidIPv4AddressFixture,
-    ) -> bool {
-        parse_ipv4_address(&valid_ipv4_address.0).is_ok()
     }
 
     #[test]
@@ -206,31 +221,6 @@ mod tests {
         );
     }
 
-    #[derive(Debug, Clone)]
-    struct ValidHostnameFixture(pub String);
-
-    // TODO add domains with hyphens
-    impl quickcheck::Arbitrary for ValidHostnameFixture {
-        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-            let subdomains: Vec<String> = faker::lorem::en::Words(1..3).fake_with_rng(g);
-            let domain_suffix = faker::internet::en::DomainSuffix().fake_with_rng(g);
-            let mut hostname = subdomains.iter().fold(String::new(), |mut acc, x| {
-                acc.push_str(x);
-                acc.push('.');
-                acc
-            });
-            hostname.push_str(domain_suffix);
-            Self(hostname)
-        }
-    }
-
-    #[quickcheck_macros::quickcheck]
-    fn parse_hostname_address_parses_random_generated_hostname(
-        valid_hostname: ValidHostnameFixture,
-    ) -> bool {
-        parse_hostname(&valid_hostname.0).is_ok()
-    }
-
     #[test]
     fn parse_hostname_parses_valid_hostnames() {
         // arrange
@@ -251,6 +241,37 @@ mod tests {
         assert_eq!(result_2, Ok(("", "sub-domain.example.com")));
         assert_eq!(result_3, Ok(("", "sub_domain.example.com")));
     }
+
+    prop_compose! {
+        fn valid_domain()(
+            subdomain_0 in "[a-zA-Z0-9_-]{1,63}",
+            subdomain_1 in "[a-zA-Z0-9_-]{1,63}",
+            subdomain_2 in "[a-zA-Z0-9_-]{1,63}",
+            subdomains in 1u8..4
+        ) -> String {
+        // valid domain can be up to (and including) 253 characters
+        match subdomains {
+            1 =>  format!("{subdomain_0}.com"),
+            2 =>  format!("{subdomain_0}.{subdomain_1}.com"),
+            3 =>  format!("{subdomain_0}.{subdomain_1}.{subdomain_2}.com"),
+            _ => unreachable!("Unexpected subdomain count")
+        }
+        }
+    }
+
+    proptest! {
+         #[test]
+         fn parse_hostname_parses_valid_hostnames_proptest(
+    hostname in valid_domain())
+     {
+             // arrange
+             // act
+             let result = parse_hostname(&hostname);
+
+             // assert
+             prop_assert_eq!(result, Ok(("", hostname.as_str())));
+         }
+         }
 
     #[test]
     fn parse_hostfile_line_successfully_parses_valid_input() {

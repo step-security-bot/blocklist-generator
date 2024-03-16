@@ -42,18 +42,18 @@ fn sources_from_blocklists(blocklists: &Blocklists) -> Vec<Source> {
         domain_blocklist_urls,
     } = blocklists;
 
-    let () = &hosts_file_blocklist_urls.iter().for_each(|val| {
+    for val in hosts_file_blocklist_urls {
         result.push(Source {
             url: val,
             source_type: SourceType::HostsFile,
         });
-    });
-    let () = &domain_blocklist_urls.iter().for_each(|val| {
+    }
+    for val in domain_blocklist_urls {
         result.push(Source {
             url: val,
             source_type: SourceType::DomainList,
         });
-    });
+    }
 
     result
 }
