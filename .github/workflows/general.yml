@@ -67,10 +67,11 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
       - name: Linting
         run: cargo clippy -- -D warnings
-  mrsv:
+  msrv:
     runs-on: ubuntu-latest
     strategy:
-      matrix: ["1.74.0"]
+      matrix:
+        msrv: ["1.74.0"]
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
