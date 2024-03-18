@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     fetch_client.domainlists(&sources, &mut set).await?;
 
     set.remove(&Host::parse("0.0.0.0").unwrap());
-    set.remove(&Host::parse("127.0.0.1").unwrap());
+    set.remove(&Host::parse("127.0.0.1").unwrap()); // DevSkim: ignore DS162092 - use of localhost IP is for removal from generated file, and not for accessing the localhost
     set.remove(&Host::parse("255.255.255.255").unwrap());
 
     get_custom_blocked_names("blocked-names.txt", &mut set);
