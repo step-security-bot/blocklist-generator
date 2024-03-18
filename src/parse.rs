@@ -98,7 +98,6 @@ mod tests {
     use crate::parse::{domainlist, hostfile, parse_domainlist_line};
 
     use super::{parse_hostfile_line, parse_hostname, parse_ipv4_address, parse_ipv4_octet};
-    use env_logger::Env;
     use fake::{faker, Fake};
     use proptest::{prop_assert_eq, proptest, strategy::Strategy};
     use url::Host;
@@ -371,9 +370,6 @@ mod tests {
     #[test]
     fn domainlist_successfully_parses_valid_input() {
         // arrange
-        //        let _ = env_logger::Builder::from_env(Env::default().default_filter_or("trace"))
-        //            .is_test(true)
-        //            .try_init();
         let input = r"example.com
 another-example.com # some annotation
 
