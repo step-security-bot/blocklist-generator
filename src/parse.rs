@@ -93,8 +93,15 @@ pub fn hostfile(file_body: &str, set: &mut HashSet<Host>) {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
+    use crate::parse::{domainlist, hostfile, parse_domainlist_line};
+
     use super::{parse_hostfile_line, parse_hostname, parse_ipv4_address, parse_ipv4_octet};
-    use proptest::{prop_assert_eq, prop_compose, proptest};
+    use env_logger::Env;
+    use fake::{faker, Fake};
+    use proptest::{prop_assert_eq, proptest, strategy::Strategy};
+    use url::Host;
 
     #[test]
     fn parse_ip4_octet_parses_valid_ipv4_octet() {
@@ -167,15 +174,17 @@ mod tests {
         );
     }
 
+    fn arb_ipv4_address() -> impl Strategy<Value = String> {
+        (0u8.., 0u8.., 0u8.., 0u8..).prop_map(|(octet_0, octet_1, octet_2, octet_3)| {
+            format!("{octet_0}.{octet_1}.{octet_2}.{octet_3}")
+        })
+    }
+
     proptest! {
     #[test]
     fn parse_ipv4_adress_parses_valid_ipv4_proptest(
-        octet_0 in 0u8..,
-        octet_1 in 0u8..,
-        octet_2 in 0u8..,
-        octet_3 in 0u8..) {
+        ipv4_address in arb_ipv4_address()){
         // arrange
-        let ipv4_address = format!("{octet_0}.{octet_1}.{octet_2}.{octet_3}");
 
         // act
         let result = parse_ipv4_address(&ipv4_address);
@@ -242,27 +251,39 @@ mod tests {
         assert_eq!(result_3, Ok(("", "sub_domain.example.com")));
     }
 
-    prop_compose! {
-        fn valid_domain()(
-            subdomain_0 in "[a-zA-Z0-9_-]{1,63}",
-            subdomain_1 in "[a-zA-Z0-9_-]{1,63}",
-            subdomain_2 in "[a-zA-Z0-9_-]{1,63}",
-            subdomains in 1u8..4
-        ) -> String {
-        // valid domain can be up to (and including) 253 characters
-        match subdomains {
-            1 =>  format!("{subdomain_0}.com"),
-            2 =>  format!("{subdomain_0}.{subdomain_1}.com"),
-            3 =>  format!("{subdomain_0}.{subdomain_1}.{subdomain_2}.com"),
-            _ => unreachable!("Unexpected subdomain count")
-        }
-        }
+    fn arb_subdomain_name() -> impl Strategy<Value = String> {
+        "[a-zA-Z0-9_-]{1,63}"
+    }
+
+    fn arb_top_level_domain() -> impl Strategy<Value = String> {
+        (0u8..1).prop_map(|_| faker::internet::en::DomainSuffix().fake::<String>())
+    }
+
+    /// There is no limit on number of subdomains in the standards, though each subdomain should be no longer than
+    /// 63 octets and the entire domain name should be no longer than 255 octets.  This test does
+    /// not currently push right up to those limits.
+    fn arb_domain_name() -> impl Strategy<Value = String> {
+        (
+            arb_subdomain_name(),
+            arb_subdomain_name(),
+            arb_subdomain_name(),
+            arb_top_level_domain(),
+            1u32..4,
+        )
+            .prop_map(|(subdomain_0, subdomain_1, subdomain_2, tld, subdomains)| {
+                match subdomains {
+                    1 => format!("{subdomain_0}.{tld}"),
+                    2 => format!("{subdomain_0}.{subdomain_1}.{tld}"),
+                    3 => format!("{subdomain_0}.{subdomain_1}.{subdomain_2}.{tld}"),
+                    _ => unreachable!("Unexpected subdomain count"),
+                }
+            })
     }
 
     proptest! {
          #[test]
          fn parse_hostname_parses_valid_hostnames_proptest(
-    hostname in valid_domain())
+    hostname in arb_domain_name())
      {
              // arrange
              // act
@@ -270,6 +291,51 @@ mod tests {
 
              // assert
              prop_assert_eq!(result, Ok(("", hostname.as_str())));
+         }
+         }
+
+    #[test]
+    fn parse_domainlist_line_successfully_handles_invalid_input() {
+        // arrange
+        let input_0: &str = "com";
+        let input_1: &str = "# some annotation";
+
+        // act
+        let result_0 = parse_domainlist_line(input_0);
+        let result_1 = parse_domainlist_line(input_1);
+
+        // assert
+        assert_eq!(result_0, None);
+        assert_eq!(result_1, None);
+    }
+
+    #[test]
+    fn parse_domainlist_line_successfully_parses_valid_input() {
+        // arrange
+        let input_0: &str = "example.com";
+        let input_1: &str = "example.com # some annotation";
+
+        // act
+        let result_0 = parse_domainlist_line(input_0);
+        let result_1 = parse_domainlist_line(input_1);
+
+        // assert
+        assert_eq!(result_0, Some("example.com"));
+        assert_eq!(result_1, Some("example.com"));
+    }
+
+    proptest! {
+         #[test]
+    fn parse_domainlist_line_successfully_parses_valid_input_proptest(
+    hostname in arb_domain_name())
+     {
+             // arrange
+
+             // act
+             let result = parse_domainlist_line(&hostname);
+
+             // assert
+             prop_assert_eq!(result, Some(hostname.as_str()));
          }
          }
 
@@ -283,5 +349,63 @@ mod tests {
 
         // assert
         assert_eq!(result_0, Some("example.com"));
+    }
+
+    proptest! {
+         #[test]
+    fn parse_hostfile_line_successfully_parses_valid_input_proptest(
+        ipv4_address in arb_ipv4_address(),
+    hostname in arb_domain_name())
+     {
+             // arrange
+             let line = format!("{ipv4_address} {hostname}");
+
+             // act
+             let result = parse_hostfile_line(&line);
+
+             // assert
+             prop_assert_eq!(result, Some(hostname.as_str()));
+         }
+         }
+
+    #[test]
+    fn domainlist_successfully_parses_valid_input() {
+        // arrange
+        //        let _ = env_logger::Builder::from_env(Env::default().default_filter_or("trace"))
+        //            .is_test(true)
+        //            .try_init();
+        let input = r"example.com
+another-example.com # some annotation
+
+# more annotation
+subdomain-which-is-too-long-012345679012345678901234567890123456.com
+final-example.com";
+        let mut hash_set: HashSet<Host> = HashSet::new();
+
+        // act
+        domainlist(input, &mut hash_set);
+
+        // assert
+        assert_eq!(hash_set.len(), 3);
+        assert!(hash_set.contains(&Host::parse("example.com").unwrap()));
+        assert!(hash_set.contains(&Host::parse("another-example.com").unwrap()));
+        assert!(hash_set.contains(&Host::parse("final-example.com").unwrap()));
+    }
+
+    #[test]
+    fn hostfile_successfully_parses_valid_input() {
+        // arrange
+        let _ = env_logger::builder().is_test(true).try_init();
+        let input = "127.0.0.1\texample.com\n0.0.0.0 another-example.com # some annotation\n\n# more annotation\n0.0.0.0\t\tsubdomain-which-is-too-long-012345679012345678901234567890123456.com\n0.0.0.0\tfinal-example.com";
+        let mut hash_set: HashSet<Host> = HashSet::new();
+
+        // act
+        hostfile(input, &mut hash_set);
+
+        // assert
+        assert_eq!(hash_set.len(), 3);
+        assert!(hash_set.contains(&Host::parse("example.com").unwrap()));
+        assert!(hash_set.contains(&Host::parse("another-example.com").unwrap()));
+        assert!(hash_set.contains(&Host::parse("final-example.com").unwrap()));
     }
 }
