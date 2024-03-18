@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn parse_ipv4_address_parses_valid_ipv4_address() {
         // arrange
-        let input_0: &str = "127.0.0.1";
+        let input_0: &str = "127.0.0.1"; // DevSkim: ignore DS162092 - use of local host IP is in test
         let input_1: &str = "127";
         let input_2: &str = "127.0.0.1 example.com";
 
@@ -206,15 +206,15 @@ mod tests {
         let result_2 = parse_ipv4_address(input_2);
 
         // assert
-        assert_eq!(result_0, Ok(("", "127.0.0.1")));
+        assert_eq!(result_0, Ok(("", "127.0.0.1"))); // DevSkim: ignore DS162092 - use of local host IP is in test
         assert_eq!(result_1, Ok(("", "127")));
-        assert_eq!(result_2, Ok((" example.com", "127.0.0.1")));
+        assert_eq!(result_2, Ok((" example.com", "127.0.0.1"))); // DevSkim: ignore DS162092 - use of local host IP is in test
     }
 
     #[test]
     fn parse_ipv4_address_fails_to_parse_invalid_ipv4_address() {
         // arrange
-        let input_0: &str = "127.0.0.1.1";
+        let input_0: &str = "127.0.0.1.1"; // DevSkim: ignore DS162092 - use of local host IP is in test
 
         // act
         let result_0 = parse_ipv4_address(input_0);
@@ -223,7 +223,7 @@ mod tests {
         assert_eq!(
             result_0,
             Err(nom::Err::Error(nom::error::Error {
-                input: "127.0.0.1.1",
+                input: "127.0.0.1.1", // DevSkim: ignore DS162092 - use of local host IP is in test
                 code: nom::error::ErrorKind::Verify
             }))
         );
@@ -341,7 +341,7 @@ mod tests {
     #[test]
     fn parse_hostfile_line_successfully_parses_valid_input() {
         // arrange
-        let input_0: &str = "127.0.0.1 example.com";
+        let input_0: &str = "127.0.0.1 example.com"; // DevSkim: ignore DS162092 - use of local host IP is in test
 
         // act
         let result_0 = parse_hostfile_line(input_0);
