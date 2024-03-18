@@ -198,7 +198,7 @@ mod tests {
         // arrange
         let input_0: &str = "127.0.0.1"; // DevSkim: ignore DS162092 - use of local host IP is in test
         let input_1: &str = "127";
-        let input_2: &str = "127.0.0.1 example.com";
+        let input_2: &str = "127.0.0.1 example.com"; // DevSkim: ignore DS162092 - use of local host IP is in test
 
         // act
         let result_0 = parse_ipv4_address(input_0);
