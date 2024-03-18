@@ -6,7 +6,9 @@ mod parse;
 
 use clap::Parser;
 use fetch::Client as FetchClient;
-use file_system::{get_blocklists_from_config_file, write_blocklist_rpz_file, Blocklists};
+use file_system::{
+    get_blocklists_from_config_file, get_custom_blocked_names, write_blocklist_rpz_file, Blocklists,
+};
 use log::warn;
 use num_format::{Locale, ToFormattedString};
 use std::{collections::HashSet, path::PathBuf};
@@ -81,6 +83,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     set.remove(&Host::parse("0.0.0.0").unwrap());
     set.remove(&Host::parse("127.0.0.1").unwrap());
     set.remove(&Host::parse("255.255.255.255").unwrap());
+
+    get_custom_blocked_names("blocked-names.txt", &mut set);
 
     let mut result: Vec<Host> = set.into_iter().collect();
     result.sort();

@@ -3,11 +3,14 @@ use humansize::{format_size, DECIMAL};
 use log::{error, info};
 use serde::Deserialize;
 use std::{
+    collections::HashSet,
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
 };
 use url::Host;
+
+use crate::parse::domainlist as parse_domainlist;
 
 #[derive(Deserialize)]
 pub struct Blocklists {
@@ -28,6 +31,19 @@ pub fn get_blocklists_from_config_file<P: AsRef<Path>>(config_file_path: P) -> B
     let Config { blocklists } = config;
 
     blocklists
+}
+
+pub fn get_custom_blocked_names<P: AsRef<Path>>(blocked_names_path: P, set: &mut HashSet<Host>) {
+    let blocked_names_display_path = blocked_names_path.as_ref().display().to_string();
+    let blocked_names_content = if let Ok(value) = fs::read_to_string(blocked_names_path) {
+        Some(value)
+    } else {
+        info!("No custom blocked names file found at `{blocked_names_display_path}.",);
+        None
+    };
+    if let Some(value) = blocked_names_content {
+        parse_domainlist(&value, set);
+    };
 }
 
 #[derive(Template)]
