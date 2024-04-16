@@ -4,6 +4,7 @@ mod fetch;
 mod file_system;
 mod parse;
 
+use ahash::RandomState;
 use clap::Parser;
 use fetch::Client as FetchClient;
 use file_system::{
@@ -77,7 +78,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sources = sources_from_blocklists(&blocklists);
 
     let fetch_client = FetchClient::default();
-    let mut set: HashSet<Host> = HashSet::new();
+    let hasher = RandomState::new();
+    let mut set: HashSet<Host, RandomState> = HashSet::with_capacity_and_hasher(524_288, hasher);
     fetch_client.domainlists(&sources, &mut set).await?;
 
     set.remove(&Host::parse("0.0.0.0").unwrap());

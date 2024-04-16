@@ -1,3 +1,4 @@
+use ahash::RandomState;
 use askama::Template;
 use humansize::{format_size, DECIMAL};
 use log::{error, info};
@@ -33,7 +34,10 @@ pub fn get_blocklists_from_config_file<P: AsRef<Path>>(config_file_path: P) -> B
     blocklists
 }
 
-pub fn get_custom_blocked_names<P: AsRef<Path>>(blocked_names_path: P, set: &mut HashSet<Host>) {
+pub fn get_custom_blocked_names<P: AsRef<Path>>(
+    blocked_names_path: P,
+    set: &mut HashSet<Host, RandomState>,
+) {
     let blocked_names_display_path = blocked_names_path.as_ref().display().to_string();
     let blocked_names_content = if let Ok(value) = fs::read_to_string(blocked_names_path) {
         Some(value)

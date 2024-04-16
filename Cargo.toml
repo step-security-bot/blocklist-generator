@@ -12,6 +12,7 @@ description = "CLI utility for generating blocklist.rpz files for use with firew
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ahash = "0.8.11"
 askama = "0.12.1"
 clap = { version = "4.5.3", features = ["derive"] }
 clap-verbosity-flag = "2.2.0"
