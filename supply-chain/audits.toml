@@ -1,10 +1,20 @@
 
 # cargo-vet audits file
 
+[[audits.addr2line]]
+who = "Rodney Lab <codesign@rodneylab.com>"
+criteria = "safe-to-deploy"
+delta = "0.21.0 -> 0.22.0"
+
 [[audits.cc]]
 who = "Rodney Lab <codesign@rodneylab.com>"
 criteria = "safe-to-deploy"
 delta = "1.0.97 -> 1.0.98"
+
+[[audits.gimli]]
+who = "Rodney Lab <codesign@rodneylab.com>"
+criteria = "safe-to-deploy"
+delta = "0.28.1 -> 0.29.0"
 
 [[audits.libc]]
 who = "Rodney Lab <codesign@rodneylab.com>"
@@ -15,6 +25,16 @@ delta = "0.2.154 -> 0.2.155"
 who = "Rodney Lab <codesign@rodneylab.com>"
 criteria = "safe-to-deploy"
 delta = "0.7.2 -> 0.7.3"
+
+[[audits.native-tls]]
+who = "Rodney Lab <codesign@rodneylab.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.11 -> 0.2.12"
+
+[[audits.object]]
+who = "Rodney Lab <codesign@rodneylab.com>"
+criteria = "safe-to-deploy"
+delta = "0.32.2 -> 0.35.0"
 
 [[trusted.aho-corasick]]
 criteria = "safe-to-deploy"
@@ -386,6 +406,12 @@ end = "2025-06-01"
 criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2020-12-25"
+end = "2025-06-01"
+
+[[trusted.tokio]]
+criteria = "safe-to-deploy"
+user-id = 10 # Carl Lerche (carllerche)
+start = "2019-03-02"
 end = "2025-06-01"
 
 [[trusted.tokio-macros]]
